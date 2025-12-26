@@ -1,0 +1,17 @@
+*.docx
+hiringCafe/
+
+*.csv
+!data_clean.csv
+!run_job_info.csv
+!scrape_runs.csv
+!remote_jobs.csv
+
+semantic_clustering_jobtitles.png
+
+.venv
+random.py
+
+*.ipynb
+
+eda_analysis.py
