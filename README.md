@@ -1,0 +1,1 @@
+building automated pipeline for webscraping remoteok.com using Selenium and analysing the scraped data. Streamlit used for displaying the trends.
