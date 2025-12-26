@@ -9,7 +9,19 @@ from pathlib import Path
 st.set_page_config(page_title="Remote Job Market Pulse", layout="wide")
 
 APP_DIR = Path(__file__).resolve().parent
-DATA_PATH = APP_DIR.parent / "data" / "processed" / "data_clean4.csv"
+DATA_PATH = APP_DIR.parent / "data" / "processed" / "data_clean.csv"
+
+RUN_INFO_PATH = APP_DIR.parent / "data" / "processed" / "run_job_info.csv"
+SCRAPE_RUNS_PATH = APP_DIR.parent / "data" / "meta" / "scrape_runs.csv"
+
+@st.cache_data
+def load_run_info():
+    return pd.read_csv(RUN_INFO_PATH, parse_dates=["scraped_at"])
+
+@st.cache_data
+def load_scrape_runs():
+    return pd.read_csv(SCRAPE_RUNS_PATH, parse_dates=["started_at"])
+
 
 @st.cache_data
 def load_data(path: Path):
@@ -25,6 +37,10 @@ def load_data(path: Path):
 
 df = load_data(DATA_PATH)
 
+run_info = load_run_info()
+latest_run = run_info.sort_values("scraped_at").iloc[-1]
+
+new_jobs_last = int(latest_run["new_jobs"])
 
 
 # header and hottest family
@@ -42,24 +58,23 @@ st.markdown(
         margin-bottom: 1.25rem;
     }
     .kpi-card {
-        background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 16px;
-        padding: 1.5rem 1.75rem;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
     }
 
     .kpi-label {
-        font-size: 0.85rem;
-        color: rgba(255,255,255,0.65);
-        margin-bottom: 0.25rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.02em;
+        color: rgba(255,255,255,0.6);
     }
 
     .kpi-value {
-        font-size: 2.25rem;
+        font-size: 1.9rem;
         font-weight: 700;
-        color: white;
-        line-height: 1.2;
+        line-height: 1.1;
     }
 
     .kpi-delta {
@@ -79,15 +94,17 @@ st.markdown(
 
 from datetime import datetime, timezone
 
-# ------------------
-# Data freshness
-# ------------------
-df["scraped_at"] = pd.to_datetime(df["scraped_at"], utc=True)
+scrape_runs = load_scrape_runs()
 
-last_scrape = df["scraped_at"].max()
+# Ensure timezone-aware
+scrape_runs["started_at"] = pd.to_datetime(
+    scrape_runs["started_at"], utc=True
+)
+
+last_run_time = scrape_runs["started_at"].max()
 now = datetime.now(timezone.utc)
 
-delta = now - last_scrape
+delta = now - last_run_time
 hours = int(delta.total_seconds() // 3600)
 minutes = int(delta.total_seconds() // 60)
 
@@ -97,6 +114,7 @@ elif hours > 0:
     freshness_text = f"Last scraped {hours} hours ago"
 else:
     freshness_text = f"Last scraped {minutes} minutes ago"
+
 
 col_title, col_fresh = st.columns([0.85, 0.15])
 
@@ -116,18 +134,20 @@ with col_fresh:
         f"""
         <div style="
             text-align: right;
-            margin-top: 1.5rem;
-            font-size: 0.8rem;
+            margin-top: 1.4rem;
+            font-size: 0.75rem;
             color: rgba(255,255,255,0.55);
+            line-height: 1.6;
         ">
-            ⏱ {freshness_text}
+            ⏱ {freshness_text}<br/>
+            🗂 {len(scrape_runs)} runs · last status: {scrape_runs.iloc[-1]['status']}
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-col_h1, col_h2, col_h3 = st.columns(3, gap="large")
+col_h1, col_h2, col_h3, col_h4 = st.columns(4, gap="large")
 
 with col_h1:
   st.markdown(
@@ -162,13 +182,26 @@ with col_h3:
         """,
         unsafe_allow_html=True,
     )
+  
+with col_h4:
+    st.markdown(
+        f"""
+        <div class="kpi-card">
+            <div class="kpi-label">New Jobs (Last Run)</div>
+            <div class="kpi-value">{new_jobs_last}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 st.markdown("---")
 left, right = st.columns([0.55, 0.45], gap="large")
 
 with left:
   
 # Real-time search engine
-  st.subheader("🔍 Skill-Specific Job Finder")
+  st.markdown("### 🔍 Skill-Specific Job Finder")
   st.caption("Search job listings by skill, role, or company")
   search_query = st.text_input(
     "Search jobs",
@@ -211,7 +244,7 @@ with left:
     help="Toggle to view all results",
   )
 
-  rows_to_show = len(filtered_df) if show_all else 5
+  rows_to_show = len(filtered_df) if show_all else 3
 
   st.dataframe( filtered_df[ 
     ['title', 'company', 'location', 'job_family', 'url'] ].head(rows_to_show), 
@@ -260,7 +293,7 @@ with right:
   fig_radar = go.Figure()
 
   fig_radar.update_layout(
-        height=350,
+        height=300,
         margin=dict(l=30, r=30, t=50, b=30),
     )
 
@@ -351,29 +384,35 @@ with tab2:
   st.plotly_chart(fig, width = "stretch")
 
 with tab3:
-    st.subheader("📈 Jobs per Scrape Run")
+    st.subheader("Market Trends Over Time")
 
-    runs = (
-        df.groupby("scraped_at")
-        .size()
-        .reset_index(name="jobs_count")
-        .sort_values("scraped_at")
-    )
+    st.caption("Total observed jobs vs newly appearing jobs per scrape run")
 
-    fig_runs = px.line(
-        runs,
+    fig = px.line(
+        run_info,
         x="scraped_at",
-        y="jobs_count",
+        y=["total_jobs", "new_jobs"],
         markers=True,
-        title="Jobs Collected per Scrape Run",
     )
 
-    fig_runs.update_layout(
+    fig.update_layout(
+        height=320,
         xaxis_title="Scrape Time",
-        yaxis_title="Jobs Collected",
-        height=350,
+        yaxis_title="Jobs",
+        legend_title_text="Metric",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
 
-    st.plotly_chart(fig_runs, width="stretch")
+    st.plotly_chart(fig, width = "stretch")
+
+
+
+
+st.caption(
+    f"""
+    Data health:
+    • {len(scrape_runs)} scrape runs
+    • Last run status: {scrape_runs.iloc[-1]['status']}
+    """
+)
