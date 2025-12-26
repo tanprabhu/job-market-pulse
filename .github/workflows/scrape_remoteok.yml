@@ -1,4 +1,4 @@
-name: Scheduled RemoteOK Scrape
+name: Scheduled RemoteOK Scrape v1
 
 on:
   schedule:
