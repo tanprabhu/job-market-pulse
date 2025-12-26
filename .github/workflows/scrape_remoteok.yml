@@ -31,11 +31,11 @@ jobs:
 
       - name: Run scraper
         run: |
-          python src/scraping/scrape_remoteok.py
+          python src/scrape_remoteok.py
 
       - name: Run processing pipeline
         run: |
-          python src/processing/process_data.py
+          python src/process_data.py
 
       - name: Commit updated data
         run: |
