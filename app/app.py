@@ -276,37 +276,37 @@ def get_radar_data(family):
 
 # Radar skill chart
 with right:
-  st.markdown(
-    """
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <h3 style="margin: 0;">🎯 Skill DNA</h3>
-        <span title="Relative skill composition derived from job postings"
-              style="
-                  font-size: 1.1rem;
-                  color: rgba(255,255,255,0.55);
-                  cursor: help;
-              ">
-            ℹ️
-        </span>
-    </div>
-    """,
-    unsafe_allow_html=True,
-  )
+    st.markdown(
+        """
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <h3 style="margin: 0;">🎯 Skill DNA</h3>
+            <span title="Relative skill composition derived from job postings"
+                style="
+                    font-size: 1.1rem;
+                    color: rgba(255,255,255,0.55);
+                    cursor: help;
+                ">
+                ℹ️
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-  selected_family = st.selectbox(
-        "Job Family",
-        df["job_family"].unique(),
-        label_visibility="collapsed",
-  )
+    selected_family = st.selectbox(
+            "Job Family",
+            df["job_family"].unique(),
+            label_visibility="collapsed",
+    )
 
-  radar_stats = get_radar_data(selected_family)
+    radar_stats = get_radar_data(selected_family)
 
-  fig_radar = go.Figure()
+    fig_radar = go.Figure()
 
-  if radar_stats.empty:
+    if radar_stats.empty:
         st.warning("No skill data available for this job family yet.")
-  else:
+    else:
         fig_radar.add_trace(
             go.Scatterpolar(
                 r=radar_stats.values,
@@ -330,9 +330,11 @@ with right:
             margin=dict(l=30, r=30, t=50, b=30),
         )
 
-  st.plotly_chart(fig_radar, width="stretch")
-  fig_radar.update_layout( polar=dict(radialaxis=dict(visible=True, range=[0, max(radar_stats.values)+5])), showlegend=False, title=f"Required Expertise: {selected_family}" ) 
-  st.plotly_chart(fig_radar, width = "stretch")
+    st.plotly_chart(
+        fig_radar,
+        width="stretch",
+        key=f"radar_chart_{selected_family}"
+    )
 
 
 tab1, tab2, tab3 = st.tabs(["Skill Landscape", "Family Comparison", "Data History"])
@@ -351,7 +353,7 @@ with tab1:
                   size="Frequency", color="Dominant Family",
                   hover_name="Skill", size_max=60,
                   title="Top 30 Skills: Market Frequency vs. Primary Job Family")
-  st.plotly_chart(fig_bubble, width = "stretch")
+  st.plotly_chart(fig_bubble, width = "stretch", key = "bubble_chart")
 
 with tab2:
   
@@ -414,7 +416,7 @@ with tab2:
   fig.update_xaxes(side="top")
   fig.update_yaxes(tickfont=dict(size=11))
 
-  st.plotly_chart(fig, width = "stretch")
+  st.plotly_chart(fig, width = "stretch", key = "heatmap_chart")
 
 with tab3:
     st.subheader("Market Trends Over Time")
@@ -437,10 +439,7 @@ with tab3:
         plot_bgcolor="rgba(0,0,0,0)",
     )
 
-    st.plotly_chart(fig, width = "stretch")
-
-
-
+    st.plotly_chart(fig, width = "stretch", key = "trend_chart")
 
 st.caption(
     f"""
