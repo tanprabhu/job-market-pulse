@@ -301,14 +301,36 @@ with right:
   )
 
   radar_stats = get_radar_data(selected_family)
+
   fig_radar = go.Figure()
 
-  fig_radar.update_layout(
-        height=300,
-        margin=dict(l=30, r=30, t=50, b=30),
-    )
+  if radar_stats.empty:
+        st.warning("No skill data available for this job family yet.")
+  else:
+        fig_radar.add_trace(
+            go.Scatterpolar(
+                r=radar_stats.values,
+                theta=radar_stats.index,
+                fill="toself",
+                name=selected_family,
+                line_color="#01674C",
+            )
+        )
 
-  fig_radar.add_trace(go.Scatterpolar( r=radar_stats.values, theta=radar_stats.index, fill='toself', name=selected_family, line_color="#01674C" )) 
+        fig_radar.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    visible=True,
+                    range=[0, radar_stats.max() + 5],
+                )
+            ),
+            showlegend=False,
+            title=f"Required Expertise: {selected_family}",
+            height=300,
+            margin=dict(l=30, r=30, t=50, b=30),
+        )
+
+  st.plotly_chart(fig_radar, width="stretch")
   fig_radar.update_layout( polar=dict(radialaxis=dict(visible=True, range=[0, max(radar_stats.values)+5])), showlegend=False, title=f"Required Expertise: {selected_family}" ) 
   st.plotly_chart(fig_radar, width = "stretch")
 
