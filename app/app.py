@@ -24,8 +24,13 @@ def load_run_info():
 
 @st.cache_data
 def load_scrape_runs():
-    return pd.read_csv(SCRAPE_RUNS_PATH, parse_dates=["started_at"])
+    if not SCRAPE_RUNS_PATH.exists():
+        return pd.DataFrame()
 
+    df = pd.read_csv(SCRAPE_RUNS_PATH)
+    df["started_at"] = pd.to_datetime(df.get("started_at"), utc=True, errors="coerce")
+    df = df.dropna(subset=["started_at"])
+    return df
 
 @st.cache_data
 def load_data(path: Path):
@@ -43,6 +48,19 @@ df = load_data(DATA_PATH)
 
 run_info = load_run_info()
 
+if not run_info.empty:
+    run_info["total_jobs"] = pd.to_numeric(
+        run_info["total_jobs"], errors="coerce"
+    )
+
+    run_info["new_jobs"] = pd.to_numeric(
+        run_info["new_jobs"], errors="coerce"
+    )
+
+    run_info = run_info.dropna(
+        subset=["scraped_at", "total_jobs", "new_jobs"]
+    )
+
 if run_info.empty:
     new_jobs_last = 0
 else:
@@ -55,8 +73,12 @@ else:
         new_jobs_last = int(value)
 
 # header and hottest family
-hottest_family = df['job_family'].value_counts().idxmax()
-hottest_count = df['job_family'].value_counts().max()
+if df.empty or "job_family" not in df.columns:
+    hottest_family, hottest_count = "N/A", 0
+else:
+    vc = df["job_family"].value_counts()
+    hottest_family = vc.idxmax()
+    hottest_count = int(vc.max())
 
 st.markdown(
     """
@@ -106,6 +128,13 @@ st.markdown(
 from datetime import datetime, timezone
 
 scrape_runs = load_scrape_runs()
+if scrape_runs.empty:
+    freshness_text = "No scrape history yet"
+    last_status = "unknown"
+else:
+    last_run_time = scrape_runs["started_at"].max()
+    ...
+    last_status = str(scrape_runs.iloc[-1].get("status", "unknown"))
 
 # Ensure timezone-aware
 scrape_runs["started_at"] = pd.to_datetime(
@@ -294,11 +323,8 @@ with right:
     )
 
 
-    selected_family = st.selectbox(
-            "Job Family",
-            df["job_family"].unique(),
-            label_visibility="collapsed",
-    )
+    families = sorted(df["job_family"].dropna().unique()) if "job_family" in df.columns else []
+    selected_family = st.selectbox("Job Family", families, label_visibility="collapsed")
 
     radar_stats = get_radar_data(selected_family)
 
@@ -333,7 +359,7 @@ with right:
     st.plotly_chart(
         fig_radar,
         width="stretch",
-        key=f"radar_chart_{selected_family}"
+        key=f"radar_chart_{selected_family or 'na'}"
     )
 
 
@@ -381,7 +407,8 @@ with tab2:
   )
 
   # Normalize per family (row-wise)
-  heatmap_norm = heatmap_df.div(heatmap_df.max(axis=1), axis=0)
+  row_max = heatmap_df.max(axis=1).replace(0, pd.NA)
+  heatmap_norm = heatmap_df.div(row_max, axis=0).fillna(0)
 
   fig = px.imshow(
       heatmap_norm,
@@ -422,24 +449,26 @@ with tab3:
     st.subheader("Market Trends Over Time")
 
     st.caption("Total observed jobs vs newly appearing jobs per scrape run")
+    if run_info.empty:
+       st.info("No historical trend data available yet.")
+    else :
+        fig = px.line(
+            run_info,
+            x="scraped_at",
+            y=["total_jobs", "new_jobs"],
+            markers=True,
+        )
 
-    fig = px.line(
-        run_info,
-        x="scraped_at",
-        y=["total_jobs", "new_jobs"],
-        markers=True,
-    )
+        fig.update_layout(
+            height=320,
+            xaxis_title="Scrape Time",
+            yaxis_title="Jobs",
+            legend_title_text="Metric",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+        )
 
-    fig.update_layout(
-        height=320,
-        xaxis_title="Scrape Time",
-        yaxis_title="Jobs",
-        legend_title_text="Metric",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-    )
-
-    st.plotly_chart(fig, width = "stretch", key = "trend_chart")
+        st.plotly_chart(fig, width = "stretch", key = "trend_chart")
 
 st.caption(
     f"""
