@@ -1,6 +1,8 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
-import time
+import time, shutil
 import pandas as pd, uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,17 +18,22 @@ BASE_DIR = Path(__file__).resolve().parent
 RAW_PATH = BASE_DIR.parent / "data" / "raw" / "remote_jobs.csv"
 SCRAPE_RUNS_PATH = BASE_DIR.parent / "data" / "meta" / "scrape_runs.csv"
 
+chrome_path = shutil.which("google-chrome") or \
+              shutil.which("chrome") or \
+              "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 def scrape(run_id:str, headless: bool = True):
     options = Options()
-
+    options.binary_location = chrome_path
+    
     if headless:
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--window-size=1920,1080")
-
-    driver = webdriver.Chrome(options=options)
+        
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
 
     try:
         driver.get(URL)
