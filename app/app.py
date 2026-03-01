@@ -16,7 +16,11 @@ SCRAPE_RUNS_PATH = APP_DIR.parent / "data" / "meta" / "scrape_runs.csv"
 
 @st.cache_data
 def load_run_info():
-    return pd.read_csv(RUN_INFO_PATH, parse_dates=["scraped_at"])
+    if not RUN_INFO_PATH.exists():
+        return pd.DataFrame()
+
+    df = pd.read_csv(RUN_INFO_PATH, parse_dates=["scraped_at"])
+    return df
 
 @st.cache_data
 def load_scrape_runs():
@@ -38,10 +42,17 @@ def load_data(path: Path):
 df = load_data(DATA_PATH)
 
 run_info = load_run_info()
-latest_run = run_info.sort_values("scraped_at").iloc[-1]
 
-new_jobs_last = int(latest_run["new_jobs"])
+if run_info.empty:
+    new_jobs_last = 0
+else:
+    latest_run = run_info.sort_values("scraped_at").iloc[-1]
+    value = latest_run.get("new_jobs", 0)
 
+    if pd.isna(value):
+        new_jobs_last = 0
+    else:
+        new_jobs_last = int(value)
 
 # header and hottest family
 hottest_family = df['job_family'].value_counts().idxmax()
