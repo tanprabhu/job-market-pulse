@@ -129,7 +129,7 @@ from datetime import datetime, timezone
 
 scrape_runs = load_scrape_runs()
 if scrape_runs.empty:
-    freshness_text = "No scrape history yet"
+    freshness_text = "No scrape history available"
     last_status = "unknown"
 else:
     last_run_time = scrape_runs["started_at"].max()
@@ -163,7 +163,7 @@ with col_title:
         """
         <h1 style="margin-bottom: 0.25rem;">Remote Job Market Pulse 2025</h1>
         <p style="color: rgba(255,255,255,0.6); margin-top: 0;">
-            Real-time insights from global remote job postings
+            Archived insights from previously collected remote job postings
         </p>
         """,
         unsafe_allow_html=True,
@@ -179,8 +179,9 @@ with col_fresh:
             color: rgba(255,255,255,0.55);
             line-height: 1.6;
         ">
-            ⏱ {freshness_text}<br/>
-            🗂 {len(scrape_runs)} runs · last status: {scrape_runs.iloc[-1]['status']}
+            ⏸ Data collection paused <br/>
+            Last archived update: {freshness_text}<br/>
+            🗂 {len(scrape_runs)} historical runs · last status: {scrape_runs.iloc[-1]['status']}
         </div>
         """,
         unsafe_allow_html=True,
@@ -448,7 +449,7 @@ with tab2:
 with tab3:
     st.subheader("Market Trends Over Time")
 
-    st.caption("Total observed jobs vs newly appearing jobs per scrape run")
+    st.caption("Historical job counts from archived scrape runs")
     if run_info.empty:
        st.info("No historical trend data available yet.")
     else :
@@ -472,8 +473,9 @@ with tab3:
 
 st.caption(
     f"""
-    Data health:
-    • {len(scrape_runs)} scrape runs
-    • Last run status: {scrape_runs.iloc[-1]['status']}
+    Data archive:
+    • {len(scrape_runs)} historical scrape runs
+    • Collection status: paused
+    • Last recorded run status: {scrape_runs.iloc[-1]['status']}
     """
 )

@@ -2,6 +2,9 @@
 Job Market Pulse is an automated data pipeline that monitors the remote job market by periodically scraping RemoteOK job listings.  
 The system preserves historical data across runs, detects newly appearing roles, and provides time-based insights into skills, job families, and market trends through an interactive dashboard.
 
+## Note
+The scraping workflow has been paused. The dashboard remains available using the archived committed data.
+
 ## Purpose
 Job listings change continuously, but most platforms expose only the current state of the market.
 This project was built to capture and analyze how remote job demand evolves over time, with a focus on skill trends, job turnover, and data freshness.
